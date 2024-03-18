@@ -1,0 +1,7 @@
+azure-functions
+azure-identity
+msrestazure
+azure-mgmt-compute
+azure-mgmt-network
+azure-keyvault-secrets
+requests
