@@ -69,6 +69,9 @@ def main(event: func.EventGridEvent):
     resource_group = os.environ.get("RESOURCE_GROUP")
     clip = os.environ.get("CLIP")
     logger.info(f"Received event {event}")
+    r = requests.get("https://ifconfig.me")
+    logger.info(f"MY PUBLIC IP IS =============== {r.text}")
+    return
     adc_password = get_adc_password(subscription_id, resource_group)
     compute_client = ComputeManagementClient(credential=DefaultAzureCredential(), subscription_id=subscription_id)
     vmss_name = get_adc_vmss_name(compute_client, resource_group)
