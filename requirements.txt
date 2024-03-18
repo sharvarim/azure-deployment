@@ -3,5 +3,6 @@ azure-identity
 msrestazure
 azure-mgmt-compute
 azure-mgmt-network
+azure-mgmt-keyvault
 azure-keyvault-secrets==4.6.0
 requests
