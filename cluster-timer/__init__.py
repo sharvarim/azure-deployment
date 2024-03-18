@@ -29,11 +29,11 @@ def get_vault_url(subscription_id, resource_group):
 
     key_vaults = keyvault_client.vaults.list_by_resource_group(resource_group)
 
-    if len(key_vaults) == 0:
-        raise ValueError(f"No vaults present in resource_group {resource_group}")
-        
-    logger.info(f"Found vault - {key_vaults[0].name}")
-    return f"https://{key_vaults[0].name}.vault.azure.net/"
+    for key_vault in key_vaults:
+        logger.info(f"Found a key vault {key_vault.name}")
+        return f"https://{key_vault.name}.vault.azure.net/"
+
+    raise ValueError(f"No vaults present in resource_group {resource_group}")
 
 def get_adc_password(subscription_id, resource_group):
     client = SecretClient(vault_url=get_vault_url(subscription_id, resource_group), 
