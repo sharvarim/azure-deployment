@@ -58,6 +58,7 @@ def get_vmss_instances_ips(compute_client, resource_group, vmss_name):
     vmss_vms = compute_client.virtual_machine_scale_set_vms.list(resource_group, vmss_name)
 
     for vm in vmss_vms:
+        logger.info(f"vm = {vm}")
         mgmt_ips.append(vm.os_profile.network_profile.network_interfaces[0].ip_configurations[0].private_ip_address)
         for i in range(1, len(vm.os_profile.network_profile.network_interfaces)):
             client_ips.append(vm.os_profile.network_profile.network_interfaces[i].ip_configurations[0].private_ip_address)
@@ -68,7 +69,7 @@ def main(event: func.EventGridEvent):
     subscription_id = os.environ.get("SUBSCRIPTION_ID")
     resource_group = os.environ.get("RESOURCE_GROUP")
     clip = os.environ.get("CLIP")
-    logger.info(f"Received event {event}")
+    logger.info(f"Received event {event} type={event.event_type}  details={event.get_json()}")
     r = requests.get("https://ifconfig.me")
     logger.info(f"MY PUBLIC IP IS =============== {r.text}")
     #return
