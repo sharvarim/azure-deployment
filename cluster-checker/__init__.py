@@ -13,6 +13,8 @@ from azure.identity import DefaultAzureCredential
 from azure.mgmt.compute import ComputeManagementClient
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.keyvault import KeyVaultManagementClient
+from azure.mgmt.network import NetworkManagementClient
+
 import azure.functions as func
 
 logger = logging.getLogger()
@@ -52,16 +54,22 @@ def get_adc_vmss_name(compute_client, resource_group):
             logger.info(f"Fetched vmss name = {vmss.name}")
             return vmss.name
     raise ValueError(f"Unable to fetch adc vmss name : {[vmss.name for vmss in vmss_list]}")
-    
-def get_vmss_instances_ips(compute_client, resource_group, vmss_name):
+
+def get_vmss_instances_ips(compute_client, network_client, resource_group, vmss_name):
     mgmt_ips, client_ips = [], []
     vmss_vms = compute_client.virtual_machine_scale_set_vms.list(resource_group, vmss_name)
 
     for vm in vmss_vms:
-        logger.info(f"vm = {vm}")
-        mgmt_ips.append(vm.os_profile.network_profile.network_interfaces[0].ip_configurations[0].private_ip_address)
-        for i in range(1, len(vm.os_profile.network_profile.network_interfaces)):
-            client_ips.append(vm.os_profile.network_profile.network_interfaces[i].ip_configurations[0].private_ip_address)
+        vm_details = compute_client.virtual_machines.get(resource_group, vm.name)
+        for interface in vm_details.network_profile.network_interfaces:
+            if "mgmt-nic" not in interface.id and "client-nic" not in interface.id:
+                continue
+            nic = network_client.network_interfaces.get(resource_group, interface.id.split('/')[-1])
+            for ip_configuration in nic.ip_configurations:
+                if ip_configuration.name == "mgmt-ip":
+                    mgmt_ips.append(ip_configuration.private_ip_address)
+                elif ip_configuration.name == "client-ip":
+                    client_ips.append(ip_configuration.private_ip_address)
     logger.info(f"Fetched mgmt-ips={mgmt_ips}  client-ips={client_ips}")
     return mgmt_ips, client_ips
     
@@ -75,8 +83,9 @@ def main(event: func.EventGridEvent):
     #return
     adc_password = get_adc_password(subscription_id, resource_group)
     compute_client = ComputeManagementClient(credential=DefaultAzureCredential(), subscription_id=subscription_id)
+    network_client = NetworkManagementClient(credential=DefaultAzureCredential(), subscription_id=subscription_id)
     vmss_name = get_adc_vmss_name(compute_client, resource_group)
-    mgmt_ips, client_ips = get_vmss_instances_ips(compute_client, resource_group, vmss_name)
+    mgmt_ips, client_ips = get_vmss_instances_ips(compute_client, network_client, resource_group, vmss_name)
     '''
     cluster = Cluster(clip=clip, nspass=adc_password)
     cluster.cleanup_stale_nodes(mgmt_ips, client_ips)
